@@ -1,0 +1,20 @@
+model:
+  name: "DreamDojo-2B"
+  num_transformer_layers: 28
+  latent_shape: [1, 16, 4, 30, 30]
+  action_chunk_dim: 384
+  text_embed_dim: 1024
+
+quantization:
+  enabled: true
+  method: "int8_selective"
+  preserved_modules:
+    - "t_embedder"
+    - "action_embedder"
+    - "adaln_modulation"
+    - "final_layer"
+
+inference:
+  device: "cuda"
+  vram_budget_mb: 6144
+  step_denoise_steps: 10

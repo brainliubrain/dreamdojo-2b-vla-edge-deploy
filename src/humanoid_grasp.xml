@@ -1,0 +1,229 @@
+<mujoco model="humanoid_grasp">
+  <!-- GR-1 style upper-body humanoid, dual 6-DoF arms + parallel grippers,
+       table-top grasping. Full sensor suite: joint pos/vel, actuator force,
+       fingertip touch, wrist 6-axis F/T, head IMU, object/EE pose+vel. -->
+  <compiler angle="radian" autolimits="true"/>
+  <option timestep="0.002" gravity="0 0 -9.81" integrator="implicitfast"/>
+
+  <default>
+    <joint damping="0.3" armature="0.01" frictionloss="0.02"/>
+    <default class="robot">
+      <!-- robot self-collision off; still collides with object/table/floor -->
+      <geom contype="1" conaffinity="0"/>
+      <default class="arm">
+      <joint damping="0.5" armature="0.02"/>
+      <position kp="60" kv="4"/>
+      <geom type="capsule" density="600" friction="0.8 0.02 0.001"/>
+    </default>
+    <default class="finger">
+      <position kp="400" kv="8"/>
+      <geom type="box" density="800" friction="1.2 0.02 0.002"/>
+    </default>
+    </default>
+    <default class="obj">
+      <geom density="600" friction="0.9 0.02 0.002"/>
+    </default>
+    <site size="0.006" group="4"/>
+  </default>
+
+  <worldbody>
+    <light pos="0.5 -1.0 2.0" dir="0 0.4 -1" diffuse="0.8 0.8 0.8"/>
+    <geom name="floor" type="plane" size="3 3 0.1" rgba="0.85 0.85 0.85 1"/>
+    <geom name="table" type="box" pos="0.15 0.85 0.325" size="0.5 0.35 0.325"
+          rgba="0.55 0.38 0.22 1" friction="0.9 0.02 0.002"/>
+
+    <body name="object" pos="0.15 0.55 0.686">
+      <freejoint name="object_free"/>
+      <geom name="object_geom" type="box" size="0.035 0.035 0.035" mass="0.15"
+            rgba="0.15 0.55 0.85 1" class="obj"/>
+      <site name="object_site" pos="0 0 0"/>
+    </body>
+
+    <!-- ============ humanoid upper body (pelvis welded to world) ============ -->
+    <body name="pelvis" pos="0 0 0.65" childclass="robot">
+      <geom name="pelvis_geom" type="box" size="0.12 0.09 0.08" rgba="0.3 0.3 0.35 1"/>
+      <!-- static leg stubs -->
+      <geom name="leg_r" type="capsule" fromto="0.09 0 -0.08 0.09 0 -0.58" size="0.055" rgba="0.25 0.25 0.3 1"/>
+      <geom name="leg_l" type="capsule" fromto="-0.09 0 -0.08 -0.09 0 -0.58" size="0.055" rgba="0.25 0.25 0.3 1"/>
+
+      <body name="torso" pos="0 0 0.08">
+        <geom name="torso_geom" type="capsule" fromto="0 0 0 0 0 0.29" size="0.09" rgba="0.35 0.4 0.5 1"/>
+
+        <body name="head" pos="0 0 0.33">
+          <geom name="head_geom" type="sphere" size="0.075" rgba="0.4 0.45 0.55 1"/>
+          <site name="imu_site" pos="0 0 0.03"/>
+          <camera name="head_cam" pos="0 0.06 0.03" xyaxes="1 0 0 0 0 1" fovy="58"/>
+        </body>
+
+        <!-- ================= RIGHT ARM (+x side, grasping arm) ================= -->
+        <body name="r_shoulder_pitch" pos="0.20 0 0.29">
+          <joint name="r_sp" axis="1 0 0" range="-1.6 1.6" class="arm"/>
+          <geom name="r_upper_arm" type="capsule" fromto="0 0 0 0 0 -0.28" size="0.045" rgba="0.45 0.5 0.6 1"/>
+          <body name="r_shoulder_roll">
+            <inertial pos="0 0 0" mass="0.05" diaginertia="0.0005 0.0005 0.0005"/>
+            <joint name="r_sr" axis="0 1 0" range="-1.2 1.2" class="arm"/>
+            <body name="r_shoulder_yaw">
+            <inertial pos="0 0 0" mass="0.05" diaginertia="0.0005 0.0005 0.0005"/>
+              <joint name="r_sy" axis="0 0 1" range="-1.2 1.2" class="arm"/>
+              <body name="r_elbow" pos="0 0 -0.28">
+                <joint name="r_el" axis="1 0 0" range="0 2.4" class="arm"/>
+                <geom name="r_forearm" type="capsule" fromto="0 0 0 0 0 -0.30" size="0.04" rgba="0.45 0.5 0.6 1"/>
+                <body name="r_wrist_pitch" pos="0 0 -0.30">
+                    <inertial pos="0 0 0" mass="0.05" diaginertia="0.0005 0.0005 0.0005"/>
+                  <joint name="r_wp" axis="1 0 0" range="-0.8 0.8" class="arm"/>
+                  <body name="r_wrist_roll" pos="0 0 -0.02">
+                    <inertial pos="0 0 0" mass="0.05" diaginertia="0.0005 0.0005 0.0005"/>
+                    <joint name="r_wr" axis="0 0 1" range="-1.0 1.0" class="arm"/>
+                    <site name="r_wrist_ft" pos="0 0 -0.02"/>
+                    <body name="r_hand" pos="0 0 -0.10">
+                      <geom name="r_palm" type="box" size="0.045 0.03 0.02" pos="0 0 -0.02"
+                            rgba="0.7 0.25 0.25 1" friction="1.0 0.02 0.002"/>
+                      <site name="r_ee" pos="0 0 -0.05"/>
+                      <site name="r_gripper_center" pos="0 0 -0.075"/>
+                      <body name="r_finger_r" pos="0.038 0 -0.04">
+                        <joint name="r_f1" type="slide" axis="1 0 0" range="0 0.032" class="finger"/>
+                        <geom name="r_finger_r_geom" size="0.008 0.02 0.045" pos="0 0 -0.045"
+                              rgba="0.8 0.2 0.2 1" class="finger"/>
+                        <site name="r_touch_r" pos="-0.009 0 -0.045"/>
+                      </body>
+                      <body name="r_finger_l" pos="-0.038 0 -0.04">
+                        <joint name="r_f2" type="slide" axis="-1 0 0" range="0 0.032" class="finger"/>
+                        <geom name="r_finger_l_geom" size="0.008 0.02 0.045" pos="0 0 -0.045"
+                              rgba="0.8 0.2 0.2 1" class="finger"/>
+                        <site name="r_touch_l" pos="0.009 0 -0.045"/>
+                      </body>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+
+        <!-- ================= LEFT ARM (mirror, held at rest pose) ================= -->
+        <body name="l_shoulder_pitch" pos="-0.20 0 0.29">
+          <joint name="l_sp" axis="1 0 0" range="-1.6 1.6" class="arm"/>
+          <geom name="l_upper_arm" type="capsule" fromto="0 0 0 0 0 -0.28" size="0.045" rgba="0.45 0.5 0.6 1"/>
+          <body name="l_shoulder_roll">
+            <inertial pos="0 0 0" mass="0.05" diaginertia="0.0005 0.0005 0.0005"/>
+            <joint name="l_sr" axis="0 1 0" range="-1.2 1.2" class="arm"/>
+            <body name="l_shoulder_yaw">
+            <inertial pos="0 0 0" mass="0.05" diaginertia="0.0005 0.0005 0.0005"/>
+              <joint name="l_sy" axis="0 0 1" range="-1.2 1.2" class="arm"/>
+              <body name="l_elbow" pos="0 0 -0.28">
+                <joint name="l_el" axis="1 0 0" range="0 2.4" class="arm"/>
+                <geom name="l_forearm" type="capsule" fromto="0 0 0 0 0 -0.30" size="0.04" rgba="0.45 0.5 0.6 1"/>
+                <body name="l_wrist_pitch" pos="0 0 -0.30">
+                    <inertial pos="0 0 0" mass="0.05" diaginertia="0.0005 0.0005 0.0005"/>
+                  <joint name="l_wp" axis="1 0 0" range="-0.8 0.8" class="arm"/>
+                  <body name="l_wrist_roll" pos="0 0 -0.02">
+                    <inertial pos="0 0 0" mass="0.05" diaginertia="0.0005 0.0005 0.0005"/>
+                    <joint name="l_wr" axis="0 0 1" range="-1.0 1.0" class="arm"/>
+                    <body name="l_hand" pos="0 0 -0.10">
+                      <geom name="l_palm" type="box" size="0.045 0.03 0.02" pos="0 0 -0.02"
+                            rgba="0.7 0.25 0.25 1" friction="1.0 0.02 0.002"/>
+                      <site name="l_ee" pos="0 0 -0.05"/>
+                      <body name="l_finger_r" pos="0.038 0 -0.04">
+                        <joint name="l_f1" type="slide" axis="1 0 0" range="0 0.032" class="finger"/>
+                        <geom name="l_finger_r_geom" size="0.008 0.02 0.045" pos="0 0 -0.045"
+                              rgba="0.8 0.2 0.2 1" class="finger"/>
+                        <site name="l_touch_r" pos="-0.009 0 -0.045"/>
+                      </body>
+                      <body name="l_finger_l" pos="-0.038 0 -0.04">
+                        <joint name="l_f2" type="slide" axis="-1 0 0" range="0 0.032" class="finger"/>
+                        <geom name="l_finger_l_geom" size="0.008 0.02 0.045" pos="0 0 -0.045"
+                              rgba="0.8 0.2 0.2 1" class="finger"/>
+                        <site name="l_touch_l" pos="0.009 0 -0.045"/>
+                      </body>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <position name="r_sp_act" joint="r_sp" kp="60" kv="4" ctrlrange="-1.6 1.6"/>
+    <position name="r_sr_act" joint="r_sr" kp="60" kv="4" ctrlrange="-1.2 1.2"/>
+    <position name="r_sy_act" joint="r_sy" kp="60" kv="4" ctrlrange="-1.2 1.2"/>
+    <position name="r_el_act" joint="r_el" kp="60" kv="4" ctrlrange="0 2.4"/>
+    <position name="r_wp_act" joint="r_wp" kp="40" kv="3" ctrlrange="-0.8 0.8"/>
+    <position name="r_wr_act" joint="r_wr" kp="30" kv="2" ctrlrange="-1.0 1.0"/>
+    <position name="r_finger_r_act" joint="r_f1" kp="400" kv="8" ctrlrange="0 0.032"/>
+    <position name="r_finger_l_act" joint="r_f2" kp="400" kv="8" ctrlrange="0 0.032"/>
+
+    <position name="l_sp_act" joint="l_sp" kp="60" kv="4" ctrlrange="-1.6 1.6"/>
+    <position name="l_sr_act" joint="l_sr" kp="60" kv="4" ctrlrange="-1.2 1.2"/>
+    <position name="l_sy_act" joint="l_sy" kp="60" kv="4" ctrlrange="-1.2 1.2"/>
+    <position name="l_el_act" joint="l_el" kp="60" kv="4" ctrlrange="0 2.4"/>
+    <position name="l_wp_act" joint="l_wp" kp="40" kv="3" ctrlrange="-0.8 0.8"/>
+    <position name="l_wr_act" joint="l_wr" kp="30" kv="2" ctrlrange="-1.0 1.0"/>
+    <position name="l_finger_r_act" joint="l_f1" kp="400" kv="8" ctrlrange="0 0.032"/>
+    <position name="l_finger_l_act" joint="l_f2" kp="400" kv="8" ctrlrange="0 0.032"/>
+  </actuator>
+
+  <sensor>
+    <!-- joint state -->
+    <jointpos name="jp_r_sp" joint="r_sp"/> <jointvel name="jv_r_sp" joint="r_sp"/>
+    <jointpos name="jp_r_sr" joint="r_sr"/> <jointvel name="jv_r_sr" joint="r_sr"/>
+    <jointpos name="jp_r_sy" joint="r_sy"/> <jointvel name="jv_r_sy" joint="r_sy"/>
+    <jointpos name="jp_r_el" joint="r_el"/> <jointvel name="jv_r_el" joint="r_el"/>
+    <jointpos name="jp_r_wp" joint="r_wp"/> <jointvel name="jv_r_wp" joint="r_wp"/>
+    <jointpos name="jp_r_wr" joint="r_wr"/> <jointvel name="jv_r_wr" joint="r_wr"/>
+    <jointpos name="jp_r_f1" joint="r_f1"/> <jointvel name="jv_r_f1" joint="r_f1"/>
+    <jointpos name="jp_r_f2" joint="r_f2"/> <jointvel name="jv_r_f2" joint="r_f2"/>
+    <jointpos name="jp_l_sp" joint="l_sp"/> <jointvel name="jv_l_sp" joint="l_sp"/>
+    <jointpos name="jp_l_sr" joint="l_sr"/> <jointvel name="jv_l_sr" joint="l_sr"/>
+    <jointpos name="jp_l_sy" joint="l_sy"/> <jointvel name="jv_l_sy" joint="l_sy"/>
+    <jointpos name="jp_l_el" joint="l_el"/> <jointvel name="jv_l_el" joint="l_el"/>
+    <jointpos name="jp_l_wp" joint="l_wp"/> <jointvel name="jv_l_wp" joint="l_wp"/>
+    <jointpos name="jp_l_wr" joint="l_wr"/> <jointvel name="jv_l_wr" joint="l_wr"/>
+    <jointpos name="jp_l_f1" joint="l_f1"/> <jointvel name="jv_l_f1" joint="l_f1"/>
+    <jointpos name="jp_l_f2" joint="l_f2"/> <jointvel name="jv_l_f2" joint="l_f2"/>
+
+    <!-- actuator forces (16) -->
+    <actuatorfrc name="af_r_sp" actuator="r_sp_act"/> <actuatorfrc name="af_r_sr" actuator="r_sr_act"/>
+    <actuatorfrc name="af_r_sy" actuator="r_sy_act"/> <actuatorfrc name="af_r_el" actuator="r_el_act"/>
+    <actuatorfrc name="af_r_wp" actuator="r_wp_act"/> <actuatorfrc name="af_r_wr" actuator="r_wr_act"/>
+    <actuatorfrc name="af_r_f1" actuator="r_finger_r_act"/> <actuatorfrc name="af_r_f2" actuator="r_finger_l_act"/>
+    <actuatorfrc name="af_l_sp" actuator="l_sp_act"/> <actuatorfrc name="af_l_sr" actuator="l_sr_act"/>
+    <actuatorfrc name="af_l_sy" actuator="l_sy_act"/> <actuatorfrc name="af_l_el" actuator="l_el_act"/>
+    <actuatorfrc name="af_l_wp" actuator="l_wp_act"/> <actuatorfrc name="af_l_wr" actuator="l_wr_act"/>
+    <actuatorfrc name="af_l_f1" actuator="l_finger_r_act"/> <actuatorfrc name="af_l_f2" actuator="l_finger_l_act"/>
+
+    <!-- fingertip touch -->
+    <touch name="touch_r_r" site="r_touch_r"/>
+    <touch name="touch_r_l" site="r_touch_l"/>
+    <touch name="touch_l_r" site="l_touch_r"/>
+    <touch name="touch_l_l" site="l_touch_l"/>
+
+    <!-- wrist 6-axis force/torque (right arm) -->
+    <force name="ft_force" site="r_wrist_ft"/>
+    <torque name="ft_torque" site="r_wrist_ft"/>
+
+    <!-- head IMU -->
+    <accelerometer name="imu_acc" site="imu_site"/>
+    <gyro name="imu_gyro" site="imu_site"/>
+    <magnetometer name="imu_mag" site="imu_site"/>
+
+    <!-- object pose + velocity -->
+    <framepos name="obj_pos" objtype="site" objname="object_site"/>
+    <framequat name="obj_quat" objtype="site" objname="object_site"/>
+    <framelinvel name="obj_linvel" objtype="site" objname="object_site"/>
+    <frameangvel name="obj_angvel" objtype="site" objname="object_site"/>
+
+    <!-- right gripper EE pose + velocity -->
+    <framepos name="r_ee_pos" objtype="site" objname="r_gripper_center"/>
+    <framequat name="r_ee_quat" objtype="site" objname="r_gripper_center"/>
+    <framelinvel name="r_ee_linvel" objtype="site" objname="r_gripper_center"/>
+    <frameangvel name="r_ee_angvel" objtype="site" objname="r_gripper_center"/>
+
+    <!-- left EE pose -->
+    <framepos name="l_ee_pos" objtype="site" objname="l_ee"/>
+  </sensor>
+</mujoco>

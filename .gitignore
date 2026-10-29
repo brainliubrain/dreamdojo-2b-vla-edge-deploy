@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.so
+.Python
+build/
+dist/
+*.pt
+*.pth
+*.safetensors
+*.bin
+*.ckpt
+*.zip
+*.tar.gz
+*.pkl
+venv/
+.venv/
+.env
